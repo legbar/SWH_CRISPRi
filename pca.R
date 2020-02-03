@@ -49,7 +49,7 @@ plot_pca <- function(pca_df, group, label, title) {
       as.data.frame() %>%
       rownames_to_column("sample_name") %>%
       inner_join(sample_metadata, by = c("sample_name" = "sample_name")) %>%
-      ggplot(aes(x=PC1,y=PC2, label = sample_name, color = !! group)) + 
+      ggplot(aes(x=PC1,y=PC2, label = !! group, color = !! group)) + 
       geom_point(aes(color = !! group), size = 4) +
       labs(x=paste0("PC1: ",round(var_explained[1]*100,1),"%"),
            y=paste0("PC2: ",round(var_explained[2]*100,1),"%")) +
@@ -92,9 +92,9 @@ keep <- head(rv_order, max(1, nrow(counts_control_norm)*(1)))
 matrix_high_var <- counts_control_norm[keep, ] %>% #Select and transpose top n vsd genes
   t()
 pca_control_norm <- prcomp(matrix_high_var, scale=T) #Calculate PCs
-var_explained_control_norm <- pca$sdev^2/sum(pca$sdev^2) #Calculate PC variance
+var_explained_control_norm <- pca_control_norm$sdev^2/sum(pca_control_norm$sdev^2) #Calculate PC variance
 
-plot_pca(pca_control_norm, group = guide_group, label = T, title = 'All samples')
+plot_pca(pca_control_norm, group = gene_target, label = T, title = 'All samples')
 
 ggsave(filename = "pca_control_norm.png", width = width, height = height, dpi = dpi, units = units) 
 
@@ -105,9 +105,9 @@ keep <- head(rv_order, max(1, nrow(counts_normal_norm)*(1)))
 matrix_high_var <- counts_normal_norm[keep, ] %>% #Select and transpose top n vsd genes
   t()
 pca_normal_norm <- prcomp(matrix_high_var, scale=T) #Calculate PCs
-var_explained_normal_norm <- pca$sdev^2/sum(pca$sdev^2) #Calculate PC variance
+var_explained_normal_norm <- pca_normal_norm$sdev^2/sum(pca_normal_norm$sdev^2) #Calculate PC variance
 
-plot_pca(pca_normal_norm, group = pca_group, label = T, title = 'All samples')
+plot_pca(pca_normal_norm, group = gene_target, label = T, title = 'All samples')
 
 ggsave(filename = "pca_normal_norm.png", width = width, height = height, dpi = dpi, units = units) 
 
@@ -116,7 +116,7 @@ ggsave(filename = "pca_normal_norm.png", width = width, height = height, dpi = d
 counts_control_norm %>%
   as.data.frame() %>%
   rownames_to_column() %>%
-  rename(ensembl_gene_id = rowname) %>%
+  rename(ensembl_gene_id = "") %>%
   # inner_join(anno_hsap, by = c("ensembl_gene_id" = "ensembl_gene_id")) %>%
   pivot_longer(-ensembl_gene_id, names_to = "guide", values_to = "count") 
 
