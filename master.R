@@ -23,9 +23,15 @@ width = 7.25 #Dimensions set to span entire width of A4 publication, 4:3 ratio
 height = 5.4375
 units = "in"
 
-kallisto_path <- "/zfs/analysis/SWH_CRISPRi/191120-2_targeted_rna_seq_batch_1_/fastq/kallisto_20200131/"
-txdb <- makeTxDbFromGFF('Homo_sapiens.GRCh38.99.gtf', organism = "Homo sapiens")
-tx2gene <- AnnotationDbi::select(txdb, keys(txdb, keytype = "TXNAME"), "GENEID", "TXNAME")
+# kallisto_path <- "/zfs/analysis/SWH_CRISPRi/191120-2_targeted_rna_seq_batch_1_/fastq/kallisto_20200131/"
+kallisto_path_v1 <- "/zfs/analysis/SWH_CRISPRi/202003_updated_GAPDH/kallisto_amplicon_v1"
+
+#updated GAPDH reference
+kallisto_path_v2 <- "/zfs/analysis/SWH_CRISPRi/202003_updated_GAPDH/kallisto_amplicon_v2"
+tx2gene <- read_delim("202003_updated_GAPDH/tx2gene", delim = " ")
+
+# txdb <- makeTxDbFromGFF('Homo_sapiens.GRCh38.99.gtf', organism = "Homo sapiens")
+# tx2gene <- AnnotationDbi::select(txdb, keys(txdb, keytype = "TXNAME"), "GENEID", "TXNAME")
 
 extra_info <- read_delim("sample_index_swh_crispri.csv", delim =",")
 
@@ -41,53 +47,60 @@ sample_metadata <- read_delim("/zfs/analysis/SWH_CRISPRi/191120-2_targeted_rna_s
                         ifelse(gene_target == "SNCA", "batch_1",
                         ifelse(gene_target == "CHCHD2", "batch_1", "batch_2")))))))
 
+#Housekeeping definitions
+all_housekeeping_genes <- c("ACTB", "C1orf43", "HMBS", "PSMB4", "GAPDH")
+
+good_housekeeping <- c("ACTB", "C1orf43", "PSMB4")
+good_housekeeping <- c("ACTB", "C1orf43", "PSMB4", "GAPDH")
+
+
 ###Examine original counts file
-amplicon_counts <- read_delim(file = "amplicons_counts.csv", delim = ",") %>%
-  mutate(gene = factor(gene))
-
-amplicon_counts_long <- amplicon_counts %>%
-  pivot_longer(cols = B2_S1:M9_S39, names_to = "guide", values_to = "count")
-
-amplicon_counts_long %>%
-  filter(gene == "C1orf43") %>%
-  ggplot(aes(guide, count)) +
-  geom_point() +
-  theme_cowplot(10) +
-  theme(axis.text.x = element_text(angle = 90)) + 
-  ggtitle("C1orf43")
-
-amplicon_counts_long %>%
-  filter(gene == "PINK1") %>%
-  ggplot(aes(guide, count)) +
-  geom_point() +
-  theme_cowplot(10) +
-  theme(axis.text.x = element_text(angle = 90)) + 
-  ggtitle("PINK1")
+# amplicon_counts <- read_delim(file = "amplicons_counts.csv", delim = ",") %>%
+#   mutate(gene = factor(gene))
+# 
+# amplicon_counts_long <- amplicon_counts %>%
+#   pivot_longer(cols = B2_S1:M9_S39, names_to = "guide", values_to = "count")
+# 
+# amplicon_counts_long %>%
+#   filter(gene == "C1orf43") %>%
+#   ggplot(aes(guide, count)) +
+#   geom_point() +
+#   theme_cowplot(10) +
+#   theme(axis.text.x = element_text(angle = 90)) + 
+#   ggtitle("C1orf43")
+# 
+# amplicon_counts_long %>%
+#   filter(gene == "PINK1") %>%
+#   ggplot(aes(guide, count)) +
+#   geom_point() +
+#   theme_cowplot(10) +
+#   theme(axis.text.x = element_text(angle = 90)) + 
+#   ggtitle("PINK1")
 
 ###Summary stats from original counts file
 
-summary_stats_per_gene <- amplicon_counts_long %>%
-  group_by(gene) %>%
-  summarise(mean = mean(count), var = var(count), n = n())
-
-ggplot(summary_stats_per_gene, aes(mean, var, label = ifelse(mean > 4000, as.character(gene), ""))) + 
-  geom_point() +
-  theme_cowplot() + 
-  geom_label_repel(label.size = 0.5) +
-  coord_cartesian(xlim = c(0, 30000), ylim = c(0, 100000000))
-  
-amplicon_counts_long_log <- amplicon_counts_long %>%
-  mutate(count = log2(count + 1))
-
-summary_stats_per_gene_log <- amplicon_counts_long_log %>%
-  group_by(gene) %>%
-  summarise(mean = mean(count), var = var(count), n = n())
-
-ggplot(summary_stats_per_gene_log, aes(mean, var, label = ifelse(var > 0.75 & mean > 4, as.character(gene), ""))) + 
-  geom_point() +
-  theme_cowplot() + 
-  geom_label_repel(label.size = 0.5) + 
-  ggtitle("Mean-Variance Relationship")
+# summary_stats_per_gene <- amplicon_counts_long %>%
+#   group_by(gene) %>%
+#   summarise(mean = mean(count), var = var(count), n = n())
+# 
+# ggplot(summary_stats_per_gene, aes(mean, var, label = ifelse(mean > 4000, as.character(gene), ""))) + 
+#   geom_point() +
+#   theme_cowplot() + 
+#   geom_label_repel(label.size = 0.5) +
+#   coord_cartesian(xlim = c(0, 30000), ylim = c(0, 100000000))
+#   
+# amplicon_counts_long_log <- amplicon_counts_long %>%
+#   mutate(count = log2(count + 1))
+# 
+# summary_stats_per_gene_log <- amplicon_counts_long_log %>%
+#   group_by(gene) %>%
+#   summarise(mean = mean(count), var = var(count), n = n())
+# 
+# ggplot(summary_stats_per_gene_log, aes(mean, var, label = ifelse(var > 0.75 & mean > 4, as.character(gene), ""))) + 
+#   geom_point() +
+#   theme_cowplot() + 
+#   geom_label_repel(label.size = 0.5) + 
+#   ggtitle("Mean-Variance Relationship")
 
 
 ### Start using kallisto counts
@@ -98,7 +111,7 @@ design = ~ 1
 min_counts = 3
 
 #create list of kallisto input files
-files <- file.path(kallisto_path, sample_metadata$sample_code, "abundance.h5")
+files <- file.path(kallisto_path_v2, sample_metadata$sample_code, "abundance.h5")
 names(files) <- sample_metadata$sample_name
 #import kallisto files
 txi <- tximport(files, type = "kallisto", tx2gene = tx2gene, ignoreTxVersion = T)
@@ -116,13 +129,30 @@ dds <- dds[keep_feature, ]
 # estimateSizeFactors(dds_housekeeping)
 # mean(colMeans(normalizationFactors(dds_housekeeping)))
 
-which(rownames(dds) %in% good_housekeeping$ensembl_gene_id)
-dds_control_norm <- estimateSizeFactors(dds, controlGenes = c(7, 36, 43))
+which(rownames(dds) %in% good_housekeeping)
+dds_control_norm <- estimateSizeFactors(dds, controlGenes = which(rownames(dds) %in% good_housekeeping))
 mean(colMeans(normalizationFactors(dds_control_norm)))
 range(colMeans(normalizationFactors(dds_control_norm)))
 dds_control_norm <-DESeq(dds_control_norm, minReplicatesForReplace = replicate_replace)
 counts_control_norm <- counts(dds_control_norm, normalized = T) 
-counts_no_norm <- counts(dds_control_norm, normalized = F)
+vsd_control_norm <- varianceStabilizingTransformation(dds_control_norm, blind = T)
+vsd_control_norm_long <- assay(vsd_control_norm) %>%
+  as.data.frame() %>%
+  rownames_to_column("gene") %>%
+  as_tibble() %>%
+  pivot_longer(-gene, names_to = "guide", values_to = "count") %>% 
+  inner_join(sample_metadata, by = c("guide" = "sample_name"))
+
+
+counts_no_norm <- counts(dds, normalized = F)
+
+vsd_no_norm <- varianceStabilizingTransformation(dds, blind = T)
+vsd_no_norm_long <- assay(vsd_no_norm) %>%
+  as.data.frame() %>%
+  rownames_to_column("gene") %>%
+  as_tibble() %>%
+  pivot_longer(-gene, names_to = "guide", values_to = "count") %>% 
+  inner_join(sample_metadata, by = c("guide" = "sample_name"))
 
 dds_normal_norm <- estimateSizeFactors(dds)
 mean(colMeans(normalizationFactors(dds_normal_norm)))
@@ -175,29 +205,47 @@ plot_pca <- function(pca_df, group, label, title) {
 
 #PCA all IP samples
 
-#Control normalised
-rv <- rowVars(counts_control_norm) #Calculate row variance
-rv_order <- order(rv, decreasing = TRUE)
-keep <- head(rv_order, max(1, nrow(counts_control_norm)*(1)))
-matrix_high_var <- counts_control_norm[keep, ] %>% #Select and transpose top n vsd genes
-  t()
-pca_control_norm <- prcomp(matrix_high_var, scale=T) #Calculate PCs
-var_explained_control_norm <- pca_control_norm$sdev^2/sum(pca_control_norm$sdev^2) #Calculate PC variance
+#No normalisation
+pca_no_norm <- prcomp(t(assay(vsd_no_norm)), scale=T) #Calculate PCs
+var_explained_no_norm <- pca_no_norm$sdev^2/sum(pca_no_norm$sdev^2) #Calculate PC variance
+plot_pca(pca_no_norm, group = batch, label = T, title = 'All samples')
 
-plot_pca(pca_control_norm, group = gene_target, label = T, title = 'All samples')
+#label no normalisation by GAPDH count
+GAPDH_counts <- vsd_no_norm_long %>% 
+  filter(gene == "GAPDH") %>%
+  select(guide, count)
+sample_metadata <- sample_metadata %>%
+  inner_join(GAPDH_counts, by = c("sample_name" = "guide")) %>% 
+  rename("count" = "gapdh_vsd_count")
+pca_no_norm$x %>% 
+  as.data.frame() %>%
+  rownames_to_column("sample_name") %>%
+  inner_join(sample_metadata, by = c("sample_name" = "sample_name")) %>%
+  ggplot(aes(x=PC1,y=PC2, label = gene_target, color = gapdh_vsd_count)) + 
+  geom_point(aes(color = gapdh_count), size = 4) +
+  labs(x=paste0("PC1: ",round(var_explained_no_norm[1]*100,1),"%"),
+       y=paste0("PC2: ",round(var_explained_no_norm[2]*100,1),"%")) +
+  geom_label_repel(box.padding = 0.5) +
+  theme_cowplot() +
+  # scale_color_lancet() + 
+  # scale_fill_lancet() +
+  ggtitle("Non-normalised PC1 and PC2 biplot") +
+  labs(color = "GAPDH Count")
+  
+ggsave("housekeeping_counts_prenormalisation_kallisto.png", dpi = 300, width = 10, height = 5.4375, units = "in")
+
+#Control normalised
+pca_control_norm <- prcomp(t(assay(vsd_control_norm)), scale=T) #Calculate PCs
+var_explained_control_norm <- pca_control_norm$sdev^2/sum(pca_control_norm$sdev^2) #Calculate PC variance
+plot_pca(pca_control_norm, group = batch, label = T, title = 'All samples')
 
 ggsave(filename = "pca_control_norm.png", width = width*2, height = height*2, dpi = dpi, units = units) 
 
 #DESeq2 auto normalised
-rv <- rowVars(counts_normal_norm) #Calculate row variance
-rv_order <- order(rv, decreasing = TRUE)
-keep <- head(rv_order, max(1, nrow(counts_normal_norm)*(1)))
-matrix_high_var <- counts_normal_norm[keep, ] %>% #Select and transpose top n vsd genes
-  t()
-pca_normal_norm <- prcomp(matrix_high_var, scale=T) #Calculate PCs
+pca_normal_norm <- prcomp(counts_normal_norm, scale=T) #Calculate PCs
 var_explained_normal_norm <- pca_normal_norm$sdev^2/sum(pca_normal_norm$sdev^2) #Calculate PC variance
 
-plot_pca(pca_normal_norm, group = gene_target, label = T, title = 'All samples')
+plot_pca(pca_normal_norm, group = batch, label = T, title = 'All samples')
 
 ggsave(filename = "pca_normal_norm.png", width = width, height = height, dpi = dpi, units = units) 
 
@@ -234,60 +282,49 @@ anno_hsap <- getBM(attributes = c('ensembl_gene_id', 'external_gene_name'), filt
 #   # inner_join(anno_hsap, by = c("ensembl_gene_id" = "ensembl_gene_id")) %>%
 #   pivot_longer(-ensembl_gene_id, names_to = "guide", values_to = "count") 
 
-### Inspect housekeeping genes
-
-all_housekeeping_genes <- c("ACTB", "C1orf43", "HMBS", "PSMB4", "GAPDH")
-
-good_housekeeping <- c("ACTB", "C1orf43", "PSMB4") %>%
-  enframe(name = NULL) %>%
-  dplyr::rename(external_gene_name = value) %>%
-  inner_join(anno_hsap, by = c("external_gene_name" = "external_gene_name"))
-
 ###Housekeeping counts based on original counts
 
-housekeeping_counts_original <- amplicon_counts_long %>%
-  filter(gene %in% all_housekeeping_genes)
-
-for (gene0 in all_housekeeping_genes){
-  plot <- housekeeping_counts_original %>%
-    filter(gene == gene0) %>%
-    ggplot(aes(guide, count)) +
-    geom_point() +
-    theme_cowplot(10) +
-    theme(axis.text.x = element_text(angle = 45)) + 
-    theme(axis.text.x = element_text(size = 4)) +
-    ggtitle(gene0)
-  assign(paste(gene0, "counts_plot", sep = '_'), envir = .GlobalEnv, plot)
-}
-
-plot_grid(ACTB_counts_plot, C1orf43_counts_plot, GAPDH_counts_plot, HMBS_counts_plot, PSMB4_counts_plot)
-
-ggsave("housekeeping_counts_prenormalisation.png", dpi = 300, width = 10, height = 5.4375, units = "in")
+# housekeeping_counts_original <- amplicon_counts_long %>%
+#   filter(gene %in% all_housekeeping_genes)
+# 
+# for (gene0 in all_housekeeping_genes){
+#   plot <- housekeeping_counts_original %>%
+#     filter(gene == gene0) %>%
+#     ggplot(aes(guide, count)) +
+#     geom_point() +
+#     theme_cowplot(10) +
+#     theme(axis.text.x = element_text(angle = 45)) + 
+#     theme(axis.text.x = element_text(size = 4)) +
+#     ggtitle(gene0)
+#   assign(paste(gene0, "counts_plot", sep = '_'), envir = .GlobalEnv, plot)
+# }
+# 
+# plot_grid(ACTB_counts_plot, C1orf43_counts_plot, GAPDH_counts_plot, HMBS_counts_plot, PSMB4_counts_plot)
+# 
+# ggsave("housekeeping_counts_prenormalisation.png", dpi = 300, width = 10, height = 5.4375, units = "in")
 
 ###Housekeeping counts based on kallisto counts
 
 counts_no_norm_long <- counts_no_norm %>%
   as.data.frame() %>%
-  rownames_to_column("ensembl_gene_id") %>%
+  rownames_to_column("gene") %>%
   as_tibble() %>%
-  pivot_longer(-ensembl_gene_id, names_to = "guide", values_to = "count") %>%
-  inner_join(anno_hsap, by = c("ensembl_gene_id" = "ensembl_gene_id")) %>%
+  pivot_longer(-gene, names_to = "guide", values_to = "count") %>% 
   inner_join(sample_metadata, by = c("guide" = "sample_name"))
 
 counts_control_norm_long <- counts_control_norm %>%
   as.data.frame() %>%
-  rownames_to_column("ensembl_gene_id") %>%
+  rownames_to_column("gene") %>%
   as_tibble() %>%
-  pivot_longer(-ensembl_gene_id, names_to = "guide", values_to = "count") %>%
-  inner_join(anno_hsap, by = c("ensembl_gene_id" = "ensembl_gene_id")) %>%
+  pivot_longer(-gene, names_to = "guide", values_to = "count") %>%
   inner_join(sample_metadata, by = c("guide" = "sample_name"))
 
 housekeeping_counts_no_norm <- counts_no_norm_long %>%
-  filter(external_gene_name %in% all_housekeeping_genes)
+  filter(gene %in% all_housekeeping_genes)
 
 for (gene0 in all_housekeeping_genes){
   plot <- housekeeping_counts_no_norm %>%
-    filter(external_gene_name == gene0) %>%
+    filter(gene == gene0) %>%
     ggplot(aes(guide, count)) +
     geom_point() +
     theme_cowplot(10) +
@@ -303,11 +340,11 @@ ggsave("housekeeping_counts_prenormalisation_kallisto.png", dpi = 300, width = 1
 
 ### Control normalised counts
 housekeeping_counts_control_norm <- counts_control_norm_long %>%
-  filter(external_gene_name %in% all_housekeeping_genes)
+  filter(gene %in% all_housekeeping_genes)
 
 for (gene0 in all_housekeeping_genes){
   plot <- housekeeping_counts_control_norm %>%
-    filter(external_gene_name == gene0) %>%
+    filter(gene == gene0) %>%
     ggplot(aes(guide, count)) +
     geom_point() +
     theme_cowplot(10) +
@@ -319,7 +356,7 @@ for (gene0 in all_housekeeping_genes){
 
 plot_grid(ACTB_counts_plot, C1orf43_counts_plot, GAPDH_counts_plot, HMBS_counts_plot, PSMB4_counts_plot)
 
-ggsave("housekeeping_counts_prenormalisation_kallisto.png", dpi = 300, width = 10, height = 5.4375, units = "in")
+# ggsave("housekeeping_counts_prenormalisation_kallisto.png", dpi = 300, width = 10, height = 5.4375, units = "in")
 
 ###Sorted housekeeping original counts
 pal_lancet()(5)
@@ -329,23 +366,23 @@ housekeeping_colours <- c("ACTB" = pal_lancet()(5)[1],
                           "HMBS" = pal_lancet()(5)[4], 
                           "PSMB4" = pal_lancet()(5)[5])
 
-housekeeping_counts_sorted <- housekeeping_counts %>%
+housekeeping_counts_no_norm_sorted <- housekeeping_counts_no_norm %>%
   arrange(count)
 
-housekeeping_counts_centered_scaled_sorted <- housekeeping_counts %>%
+housekeeping_counts_no_norm_centered_scaled_sorted <- housekeeping_counts_no_norm %>%
   group_by(gene) %>%
   mutate(count = count - mean(count)) %>%
   mutate(count = count / sd(count)) %>%
   arrange(count) 
 
-all_housekeeping <- housekeeping_counts_centered_scaled_sorted %>%
+all_housekeeping <- housekeeping_counts_no_norm_centered_scaled_sorted %>%
   ggplot(aes(x = fct_reorder(guide, count), count, colour = gene)) + 
   geom_point() +
   scale_color_manual(values = housekeeping_colours) +
   theme_cowplot() + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6)) 
 
-housekeeping_noGapdh <- housekeeping_counts_centered_scaled_sorted %>%
+housekeeping_noGapdh <- housekeeping_counts_no_norm_centered_scaled_sorted %>%
   filter(gene != "GAPDH") %>%
   ggplot(aes(x = fct_reorder(guide, count), count, colour = gene)) + 
   geom_point() +
@@ -353,7 +390,7 @@ housekeeping_noGapdh <- housekeeping_counts_centered_scaled_sorted %>%
   theme_cowplot() + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6)) 
 
-housekeeping_noGapdh_noHmbs <- housekeeping_counts_centered_scaled_sorted %>%
+housekeeping_noGapdh_noHmbs <- housekeeping_counts_no_norm_centered_scaled_sorted %>%
   filter(gene != "GAPDH" & gene != "HMBS") %>%
   ggplot(aes(x = fct_reorder(guide, count), count, colour = gene)) + 
   geom_point() +
@@ -429,31 +466,30 @@ counts_control_norm_long %>%
   distinct()
 
 medians <- counts_control_norm_long %>%
-  filter(external_gene_name != gene_target) %>%
-  group_by(external_gene_name) %>%
+  filter(gene != gene_target) %>%
+  group_by(gene) %>%
   summarise(median = median(count)) %>%
   mutate(log2median = log2(median + 1))
 
 
 
-gene_targeted = "Scramble/Control"
+gene_targeted = "PARK7"
 
 counts_control_norm_long %>%
-  inner_join(medians, by = c("external_gene_name" = "external_gene_name")) %>%
+  inner_join(medians, by = c("gene" = "gene")) %>%
   filter(gene_target == gene_targeted) %>%
   mutate(log2count = (log2(count) + 1)) %>%
-  mutate(is_gene_targeted = ifelse(external_gene_name == gene_target, 'y', 'n')) %>%
-  select(ensembl_gene_id, 
-         guide, 
+  mutate(is_gene_targeted = ifelse(gene == gene_target, 'y', 'n')) %>%
+  select(guide, 
          count, 
          log2count, 
-         external_gene_name, 
+         gene, 
          gene_target, 
          median, 
          log2median, 
          is_gene_targeted) %>%
   pivot_longer(cols = c("log2count", "log2median"), names_to = "count_type", values_to = "log_value") %>% 
-  ggplot(aes(x = external_gene_name, y = log_value, colour = count_type)) + 
+  ggplot(aes(x = gene, y = log_value, colour = count_type)) + 
   geom_point() + 
   theme_cowplot() + 
   scale_colour_npg() +
@@ -464,10 +500,10 @@ counts_control_norm_long %>%
 
 for(target in genes_targeted$gene_target){
   plot <- counts_control_norm_long %>%
-    filter(external_gene_name == target) %>%
+    filter(gene == target) %>%
     mutate(log2count = (log2(count) + 1)) %>%
     mutate(is_gene_targeted = ifelse(gene_target == target, 'y', 'n')) %>%
-    ggplot(aes(x = external_gene_name, log2count, colour = is_gene_targeted)) +
+    ggplot(aes(x = gene, log2count, colour = is_gene_targeted)) +
     # geom_violin(aes(fill = is_gene_targeted)) + 
     geom_point(position = position_jitterdodge()) +
     theme_cowplot() +
