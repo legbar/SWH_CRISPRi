@@ -1,0 +1,13 @@
+{
+	"n_targets": 61,
+	"n_bootstraps": 0,
+	"n_processed": 204859,
+	"n_pseudoaligned": 202821,
+	"n_unique": 202821,
+	"p_pseudoaligned": 99.0,
+	"p_unique": 99.0,
+	"kallisto_version": "0.46.2",
+	"index_version": 10,
+	"start_time": "Mon Mar  9 17:37:12 2020",
+	"call": "kallisto quant -i /zfs/analysis/SWH_CRISPRi/202003_updated_GAPDH/references/amplicons.idx -t 8 --bias -o /zfs/analysis/SWH_CRISPRi/202003_updated_GAPDH/kallisto_amplicon_v1/J3_S18 J3_S18_L001_R1_001.fastq.gz J3_S18_L001_R2_001.fastq.gz"
+}
