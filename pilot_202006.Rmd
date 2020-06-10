@@ -185,13 +185,27 @@ vsd_normal_norm <- varianceStabilizingTransformation(dds_normal_norm, blind = T)
 ```
 
 ```{r}
+counts_control_norm %>%
+  as.data.frame() %>%
+  rownames_to_column("gene") %>%
+  pivot_longer(-gene, names_to = "sample", values_to = "count") %>%
+  inner_join(sample_metadata, by = c("sample" = "sample_name")) %>%
+  ggplot(aes(x = sample, y = count)) +
+  geom_boxplot() +
+  theme(axis.text = element_text(angle = 45)) +
+  ggtitle("DESeq2 Median Ratios normalisation") +
+  theme_cowplot()
+
 log2(counts_no_norm + 1) %>%
   as.data.frame() %>%
   rownames_to_column("gene") %>%
   pivot_longer(-gene, names_to = "sample", values_to = "count") %>%
   inner_join(sample_metadata, by = c("sample" = "sample_name")) %>%
   ggplot(aes(x = sample, y = count)) +
-  geom_boxplot() 
+  geom_boxplot() +
+  theme(axis.text = element_text(angle = 45)) +
+  ggtitle("No normalisation") +
+  theme_cowplot()
 
 log2(counts_normal_norm + 1) %>%
   as.data.frame() %>%
@@ -199,15 +213,76 @@ log2(counts_normal_norm + 1) %>%
   pivot_longer(-gene, names_to = "sample", values_to = "count") %>%
   inner_join(sample_metadata, by = c("sample" = "sample_name")) %>%
   ggplot(aes(x = sample, y = count)) +
-  geom_boxplot()
-
+  geom_boxplot() +
+  theme(axis.text = element_text(angle = 45)) +
+  ggtitle("DESeq2 Median Ratios normalisation") +
+  theme_cowplot()
+  
 log2(counts_control_norm + 1) %>%
   as.data.frame() %>%
   rownames_to_column("gene") %>%
   pivot_longer(-gene, names_to = "sample", values_to = "count") %>%
   inner_join(sample_metadata, by = c("sample" = "sample_name")) %>%
   ggplot(aes(x = sample, y = count)) +
-  geom_boxplot() 
+  geom_boxplot() +
+  theme(axis.text = element_text(angle = 45)) +
+  ggtitle("Housekeeping Gene normalisation (DESeq2)") +
+  theme_cowplot()
+
+#D9 Outlier genes
+counts_control_norm %>%
+  as.data.frame() %>%
+  rownames_to_column("gene") %>%
+  pivot_longer(-gene, names_to = "sample", values_to = "count") %>%
+  filter(sample == "D9") %>%
+  arrange(desc(count)) %>%
+  top_n(5)
+
+norm_counts <- log2(counts_control_norm + 1) %>%
+  as.data.frame() %>%
+  rownames_to_column("gene") %>%
+  pivot_longer(-gene, names_to = "sample", values_to = "count") 
+
+```
+
+```{r}
+heatmap(log2(counts_normal_norm + 1))
+```
+
+```{r}
+norm_counts %>%
+  filter(gene == "GAPDH") %>%
+  inner_join(sample_metadata, by = c("sample" = "sample_name")) %>%
+  ggplot(aes(x = batch, y = count)) +
+  geom_boxplot() +
+  theme_cowplot()
+
+percent_gapdh <- counts_control_norm["GAPDH",] * 100 / colSums(counts_control_norm)
+
+sample_metadata$percent_gapdh <- percent_gapdh
+
+sample_metadata %>%
+  ggplot(aes(x = batch, y = percent_gapdh)) +
+  geom_jitter(aes(colour = batch)) +
+  theme_cowplot() +
+  theme(legend.position = "None") +
+  ggtitle("Percent of normalised reads represented by GAPDH")
+
+norm_counts_metadata <- norm_counts %>%
+  inner_join(sample_metadata, by = c("sample" = "sample_name"))
+
+lm1<- lm(count ~ percent_gapdh, data= norm_counts_metadata)
+
+norm_counts_metadata$corrected_count <- lm1$fitted.values
+
+norm_counts_metadata %>% 
+  ggplot(aes(x = batch, y = count)) +
+  geom_boxplot() +
+  theme_cowplot()
+
+norm_counts_mat <- norm_counts_metadata %>%
+  select(gene, sample, corrected_count) %>%
+  pivot_wider(names_from = sample, values_from = corrected_count)
 
 
 ```
