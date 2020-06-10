@@ -178,7 +178,40 @@ mean(colMeans(normalizationFactors(dds_normal_norm)))
 range(colMeans(normalizationFactors(dds_normal_norm)))
 dds_normal_norm <-DESeq(dds_normal_norm, minReplicatesForReplace = replicate_replace)
 counts_normal_norm <- counts(dds_normal_norm, normalized = T) 
+
+
+
+vsd_normal_norm <- varianceStabilizingTransformation(dds_normal_norm, blind = T)
 ```
+
+```{r}
+log2(counts_no_norm + 1) %>%
+  as.data.frame() %>%
+  rownames_to_column("gene") %>%
+  pivot_longer(-gene, names_to = "sample", values_to = "count") %>%
+  inner_join(sample_metadata, by = c("sample" = "sample_name")) %>%
+  ggplot(aes(x = sample, y = count)) +
+  geom_boxplot() 
+
+log2(counts_normal_norm + 1) %>%
+  as.data.frame() %>%
+  rownames_to_column("gene") %>%
+  pivot_longer(-gene, names_to = "sample", values_to = "count") %>%
+  inner_join(sample_metadata, by = c("sample" = "sample_name")) %>%
+  ggplot(aes(x = sample, y = count)) +
+  geom_boxplot()
+
+log2(counts_control_norm + 1) %>%
+  as.data.frame() %>%
+  rownames_to_column("gene") %>%
+  pivot_longer(-gene, names_to = "sample", values_to = "count") %>%
+  inner_join(sample_metadata, by = c("sample" = "sample_name")) %>%
+  ggplot(aes(x = sample, y = count)) +
+  geom_boxplot() 
+
+
+```
+
 
 # PCA plotting function
 ```{r}
